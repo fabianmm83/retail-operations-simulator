@@ -1,0 +1,242 @@
+punto de partida real:
+
+Empresa simulada: Cuidado con Rikochet
+Repositorio: retail-operations-simulator
+Local: C:\Users\Fabia\OneDrive\Escritorio\retail-operations-simulator
+GitHub: fabianmm83/retail-operations-simulator
+El repositorio está vacío.
+La documentación maestra ya está en tu Drive.
+Este primer repositorio será exclusivamente el sistema operacional simulado. El Data Platform vendrá después.
+
+Vamos a construirlo como un proyecto serio desde el primer commit, no como un script que luego intentaremos convertir en aplicación.
+
+Primer objetivo
+
+Primero vamos a levantar el esqueleto:
+
+retail-operations-simulator/
+│
+├── app/
+│   ├── api/
+│   ├── core/
+│   ├── db/
+│   ├── models/
+│   ├── schemas/
+│   ├── services/
+│   └── simulation/
+│
+├── tests/
+│
+├── alembic/
+│
+├── .env.example
+├── .gitignore
+├── docker-compose.yml
+├── Dockerfile
+├── pyproject.toml
+└── README.md
+
+Después iremos construyendo en este orden:
+
+1. Proyecto Python
+2. Configuración
+3. PostgreSQL + Docker
+4. SQLAlchemy + Alembic
+5. Modelo de dominio
+6. Migraciones
+7. CRUD/base API
+8. Motor de simulación
+9. Reglas de negocio
+10. Eventos
+11. Tests
+12. Dockerización
+13. CI
+
+No vamos a construir todavía toda la simulación. Primero dejaremos una base ejecutable y verificable. Después iremos agregando dominio por dominio.
+
+Como quieres empezar a generar código directamente en tu laptop, lo más práctico es que te vaya dando cada archivo completo y el comando para crearlo/ejecutarlo, y vamos validando cada etapa antes de avanzar.
+
+Paso 1 — Crear el proyecto base
+
+Abre PowerShell en:
+
+cd "C:\Users\Fabia\OneDrive\Escritorio\retail-operations-simulator"
+
+Y crea el entorno virtual:
+
+py -3.12 -m venv .venv
+
+Actívalo:
+
+.\.venv\Scripts\Activate.ps1
+
+Deberías ver algo parecido a:
+
+(.venv) PS C:\Users\Fabia\OneDrive\Escritorio\retail-operations-simulator>
+
+Después instalaremos las dependencias iniciales:
+
+pip install fastapi uvicorn[standard] sqlalchemy psycopg[binary] alembic pydantic-settings faker numpy
+
+Y las de desarrollo:
+
+pip install pytest httpx ruff
+
+Luego guardamos:
+
+pip freeze > requirements.txt
+Pero prefiero que usemos pyproject.toml
+
+Como este proyecto queremos llevarlo a un nivel serio, no dejaría requirements.txt como nuestra configuración principal. Podemos usar pyproject.toml desde el comienzo y posteriormente hacer:
+
+ruff
+pytest
+build
+
+con una configuración centralizada.
+
+Por eso, antes de continuar con instalaciones indiscriminadas, vamos a establecer el pyproject.toml correctamente.
+
+La primera versión será deliberadamente pequeña:
+
+[project]
+name = "retail-operations-simulator"
+version = "0.1.0"
+description = "Stateful retail operations simulator for the Cuidado con Rikochet data ecosystem."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "sqlalchemy",
+    "psycopg[binary]",
+    "alembic",
+    "pydantic-settings",
+    "faker",
+    "numpy"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "httpx",
+    "ruff"
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+Guárdalo como:
+
+pyproject.toml
+
+y entonces instala el proyecto:
+
+pip install -e ".[dev]"
+Paso 2 — Estructura inicial
+
+Desde la raíz:
+
+mkdir app
+mkdir app\api
+mkdir app\core
+mkdir app\db
+mkdir app\models
+mkdir app\schemas
+mkdir app\services
+mkdir app\simulation
+mkdir tests
+
+Y crea los __init__.py:
+
+New-Item app\__init__.py
+New-Item app\api\__init__.py
+New-Item app\core\__init__.py
+New-Item app\db\__init__.py
+New-Item app\models\__init__.py
+New-Item app\schemas\__init__.py
+New-Item app\services\__init__.py
+New-Item app\simulation\__init__.py
+
+De momento:
+
+app/
+├── __init__.py
+├── api/
+│   └── __init__.py
+├── core/
+│   └── __init__.py
+├── db/
+│   └── __init__.py
+├── models/
+│   └── __init__.py
+├── schemas/
+│   └── __init__.py
+├── services/
+│   └── __init__.py
+└── simulation/
+    └── __init__.py
+
+tests/
+Paso 3 — Primera aplicación FastAPI
+
+Crea:
+
+app/main.py
+
+con:
+
+from fastapi import FastAPI
+
+app = FastAPI(
+    title="Cuidado con Rikochet - Retail Operations Simulator",
+    version="0.1.0",
+    description=(
+        "Stateful retail operations simulator for the "
+        "Cuidado con Rikochet data ecosystem."
+    ),
+)
+
+
+@app.get("/health")
+def health_check() -> dict[str, str]:
+    return {
+        "status": "ok",
+        "service": "retail-operations-simulator",
+    }
+
+Ejecuta:
+
+uvicorn app.main:app --reload
+
+Y abre:
+
+http://127.0.0.1:8000/health
+
+Deberías recibir:
+
+{
+  "status": "ok",
+  "service": "retail-operations-simulator"
+}
+
+También tendremos automáticamente:
+
+http://127.0.0.1:8000/docs
+
+para Swagger.
+
+Primer commit
+
+Cuando eso funcione:
+
+git add .
+git commit -m "chore: initialize retail operations simulator"
+git push -u origin main
+
+Y paramos ahí.
+
+No quiero que avancemos al modelo de datos hasta comprobar que la base está funcionando correctamente. El siguiente bloque será importante: vamos a configurar PostgreSQL + Docker Compose + SQLAlchemy + Alembic, y después diseñaremos las primeras entidades de Cuidado con Rikochet sobre esa infraestructura.

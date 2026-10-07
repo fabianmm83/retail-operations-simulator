@@ -1,0 +1,584 @@
+================================================================================
+CUIDADO CON RIKOCHET — RETAIL OPERATIONS SIMULATOR
+ESTADO DEL PROYECTO
+Última actualización: 2026-10-06
+================================================================================
+
+
+--------------------------------------------------------------------------------
+1. PROPÓSITO DEL PROYECTO
+--------------------------------------------------------------------------------
+
+Construir un ecosistema de proyectos orientado a demostrar capacidades de
+Data Engineering, Backend Engineering, diseño de sistemas, modelado de datos,
+APIs, bases de datos relacionales, simulación de operaciones, Data Quality,
+Analytics y visualización.
+
+El proyecto NO es una tienda online ni un CRUD. Es un SISTEMA OPERACIONAL
+SINTÉTICO con estado, reglas de negocio, eventos y consecuencias que produce
+datos empresariales coherentes.
+
+La empresa ficticia se llama "Cuidado con Rikochet" y es un retailer deportivo
+mexicano (ropa, calzado, accesorios) con operación online + tiendas físicas.
+
+
+--------------------------------------------------------------------------------
+2. ARQUITECTURA GENERAL
+--------------------------------------------------------------------------------
+
+El ecosistema está planteado con DOS repositorios:
+
+┌────────────────────────────────────────────────────────────┐
+│  retail-operations-simulator                               │
+│  Python + FastAPI + PostgreSQL + SQLAlchemy + Alembic      │
+│  → Simula la operación diaria de la empresa                │
+│  → Produce datos operacionales con estado                  │
+└──────────────────────┬─────────────────────────────────────┘
+                       │
+                       │ datos
+                       ▼
+┌────────────────────────────────────────────────────────────┐
+│  retail-data-platform                                      │
+│  Ingestion → RAW → Validation → STAGING → Transformation   │
+│  → Analytical Model → KPIs → React Dashboard               │
+│  → Consume los datos del simulator y los convierte en      │
+│    analítica + visualización                               │
+└────────────────────────────────────────────────────────────┘
+
+Estado actual: el simulator está en construcción. El data-platform queda
+documentado como planeación (Bloque H) pero no se ha empezado.
+
+
+--------------------------------------------------------------------------------
+3. REPOSITORIO ACTIVO — retail-operations-simulator
+--------------------------------------------------------------------------------
+
+GitHub: https://github.com/fabianmm83/retail-operations-simulator
+Local:  C:\Users\Fabia\OneDrive\Escritorio\retail-operations-simulator
+
+
+STACK TÉCNICO
+-------------
+
+- Python 3.13
+- FastAPI
+- Uvicorn
+- PostgreSQL 16 (en Docker, puerto 5434)
+- SQLAlchemy 2.1
+- Alembic 1.20
+- Pydantic 2.13
+- pydantic-settings
+- Faker
+- NumPy
+- pytest
+- httpx
+- Ruff
+- Docker + Docker Compose
+
+
+INFRAESTRUCTURA
+---------------
+
+- Contenedor Docker: retail-operations-postgres
+- Puerto host: 5434 → 5432 (contenedor)
+- Base de datos: retail_operations
+- Usuario: retail_user
+- Healthcheck configurado
+
+Conexión verificada:
+  GET /health         → {"status": "ok", "service": "retail-operations-simulator"}
+  GET /health/database → {"status": "ok", "database": "postgresql"}
+
+
+ESTRUCTURA DE CARPETAS
+----------------------
+
+retail-operations-simulator/
+├── alembic/
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions/
+│       ├── 90d73468a824_001_create_catalog_tables.py
+│       ├── 797d1297f7a7_002_create_geography_tables.py
+│       ├── 36f36181cb96_003_create_customers_tables.py
+│       ├── 8f0f07879828_004_create_inventory_tables.py
+│       ├── b3e3c09db3a4_005_create_suppliers_tables.py
+│       ├── a4bf27e873c5_006_create_sales_tables.py
+│       └── 58f65b4ae46a_007_create_simulation_tables.py
+├── alembic.ini
+├── app/
+│   ├── main.py
+│   ├── api/
+│   │   └── v1/
+│   │       ├── router.py
+│   │       ├── health.py
+│   │       ├── catalog.py
+│   │       ├── geography.py
+│   │       ├── customers.py
+│   │       ├── inventory.py
+│   │       ├── suppliers.py
+│   │       ├── sales.py
+│   │       └── simulation.py
+│   ├── core/
+│   │   ├── config.py
+│   │   └── enums.py
+│   ├── db/
+│   │   ├── base.py
+│   │   ├── session.py
+│   │   └── mixins.py
+│   ├── models/
+│   │   ├── catalog.py
+│   │   ├── geography.py
+│   │   ├── customers.py
+│   │   ├── inventory.py
+│   │   ├── suppliers.py
+│   │   ├── sales.py
+│   │   └── simulation.py
+│   ├── schemas/
+│   │   ├── catalog.py
+│   │   ├── geography.py
+│   │   ├── customers.py
+│   │   ├── inventory.py
+│   │   ├── suppliers.py
+│   │   ├── sales.py
+│   │   └── simulation.py
+│   ├── seed/
+│   │   ├── __main__.py
+│   │   ├── catalog.py
+│   │   ├── geography.py
+│   │   ├── customers.py
+│   │   ├── inventory.py
+│   │   ├── suppliers.py
+│   │   └── carriers.py
+│   └── simulation/      ← VACÍO (siguiente bloque de trabajo)
+├── tests/
+├── .env
+├── .env.example
+├── docker-compose.yml
+├── Dockerfile
+├── pyproject.toml
+└── README.md
+
+
+--------------------------------------------------------------------------------
+4. PLANEACIÓN COMPLETA (BLOQUES A–H)
+--------------------------------------------------------------------------------
+
+Toda la planeación funcional del negocio está cerrada en 8 bloques:
+
+BLOQUE A — CATÁLOGO
+  5 niveles jerárquicos: Segmento → Departamento → Categoría → Producto → SKU
+  4 departamentos: APPAREL · FOOTWEAR · EQUIPMENT · ACCESSORIES
+  12 categorías: PLAYERAS, SUDADERAS, PANTS, SHORTS, LEGGINGS, TENIS,
+                 BALONES, EQUIPO_ENTRENAMIENTO, GORRAS, MOCHILAS,
+                 BOTELLAS, CALCETINES
+  4 segmentos: WOMEN · MEN · KIDS · UNISEX
+  9 colores: BLK WHT GRY NVY RED BLU GRN PNK YLW
+  4 perfiles de demanda: HIGH · MEDIUM · LOW · NICHE
+  4 patrones estacionales: NONE · WINTER · NEW_YEAR · SUMMER
+  5 etapas de lifecycle: LAUNCH · GROWTH · MATURE · DECLINE · DISCONTINUED
+  Precios en MXN terminados en .99
+  Márgenes: APPAREL 60% · FOOTWEAR 50% · EQUIPMENT 45% · ACCESSORIES 55%
+  3 productos estrella Rikochet (branded)
+
+BLOQUE B — GEOGRAFÍA
+  10 estados: CDMX, NL, JAL (HIGH) · EDOMEX, QRO, PUE, BC (MEDIUM) ·
+              OAX, CHIS, GRO (LOW)
+  3 CEDIS: CEDIS-CDMX (centro-sur), CEDIS-NL (norte), CEDIS-JAL (occidente)
+  12 tiendas: 3 CDMX, 2 NL, 2 JAL, 2 EDOMEX, 1 QRO, 1 PUE, 1 BC
+  Atributos por estado: population_share, income_index, online_penetration,
+                        regional_factor, growth_rate, income_group, region
+  Matriz de afinidad estado × categoría (120 valores)
+
+BLOQUE C — CLIENTES
+  6 perfiles: NEW · ONE_TIME · OCCASIONAL · REGULAR · LOYAL · INACTIVE
+  Distribución: 4% · 18% · 25% · 30% · 13% · 10%
+  3 canales: ONLINE · STORE · OMNICHANNEL
+  3 sensibilidades de precio: LOW · MEDIUM · HIGH
+  4 géneros: MALE · FEMALE · OTHER
+  Reglas de transición de perfiles por compras y tiempo
+  Inactividad a 180 días, reactivación a 0.5% diario
+  Población inicial: 10,000 clientes
+
+BLOQUE D — INVENTARIO
+  15 ubicaciones (3 CEDIS + 12 tiendas)
+  Reorder points por perfil: HIGH 50 · MEDIUM 25 · LOW 10 · NICHE 5
+  Safety stock = 40% del reorder point
+  Max stock = 4× reorder point
+  7 tipos de movimiento: SALE · PURCHASE_RECEIPT · RETURN · ADJUSTMENT ·
+                          DAMAGE · TRANSFER_OUT · TRANSFER_IN
+  available_quantity GENERATED (quantity - reserved_quantity)
+  Reservas expiran a 48 horas
+  Stockout solo por causa, no por azar
+
+BLOQUE E — SUPPLIERS
+  8 proveedores: 3 nacionales grandes · 3 nacionales medianos · 2 importados
+  Lead times: 3–10 días nacionales · 25–40 importados
+  Confiabilidad: 80–98%
+  MOQ: 50 (mediano) · 100 (grande) · 500 (importado)
+  Descuento: 5% grande · 0% mediano · 15% importado
+  Relación 1–3 proveedores por producto con prioridad
+  7 estados de PO: PENDING → CONFIRMED → IN_TRANSIT → RECEIVED
+                   · PARTIAL · CANCELLED
+
+BLOQUE F — SALES + LOGISTICS
+  2 canales: ONLINE · STORE
+  9 estados de orden: PENDING → CONFIRMED → PROCESSING → PACKED →
+                      SHIPPED → IN_TRANSIT → DELIVERED ·
+                      CANCELLED · RETURNED
+  8 estados de shipment: PENDING → PACKED → SHIPPED → IN_TRANSIT →
+                         OUT_FOR_DELIVERY → DELIVERED ·
+                         DELAYED · LOST
+  5 carriers: CAR-01 a CAR-05
+  Lead time: 1–7 días según carrier y región
+  Envío gratis si subtotal >= $599 MXN
+  Fulfillment: 85% desde CEDIS · 15% desde tienda
+  Cancelación: 5% por pago · 1% por cliente
+  Returns: ~6% de órdenes entregadas
+  5 estados de return: REQUESTED → APPROVED → RECEIVED →
+                       REFUNDED · REJECTED
+
+BLOQUE G — SIMULATION ENGINE
+  Tiempo: día a día (simulation_date), 365 días default
+  Ciclo diario en 8 fases:
+    1. Avance de tiempo
+    2. Eventos del día
+    3. Carry-over (tránsitos, backorders, entregas)
+    4. Generación de demanda
+    5. Procesamiento de órdenes
+    6. Logística (shipments, transfers, returns)
+    7. Reabastecimiento (evaluación de reorder)
+    8. Cierre del día (transiciones, KPIs, persistencia)
+  Fórmula de demanda: 8 factores + variación aleatoria ±15%
+  ~50–70 eventos por año
+  Cascadas máximas de 2 niveles
+  Seed jerárquico para reproducibilidad
+  Snapshots cada 1/7/30 días según duración
+  7 escenarios: BASELINE · HIGH_DEMAND · SUPPLY_CRISIS ·
+                LOGISTICS_CRISIS · ECONOMIC_DOWNTURN · PEAK_SEASON ·
+                STRESS_TEST
+
+BLOQUE H — DATA ENGINEERING (planeado, no implementado)
+  Capas: Ingestion → RAW → Validation → STAGING → Transformation →
+         Analytical → KPIs → Dashboard
+  Modelo estrella: 6 dims + 4 facts
+  Data Quality: 6 dimensiones + DQ Score
+  Orquestación: V1 Python CLI · V2 Airflow · V3 dbt · V4 Cloud
+  Dashboard: React + TypeScript + Vite + Tailwind + TanStack Query
+  8 vistas planeadas: Overview · Sales · Inventory · Logistics ·
+                      Procurement · Customers · Simulation · Alerts
+
+
+--------------------------------------------------------------------------------
+5. MODELO DE DATOS IMPLEMENTADO (M1–M7)
+--------------------------------------------------------------------------------
+
+Se aplicaron 7 migraciones de Alembic. 25 tablas + alembic_version = 26.
+
+M1 — CATÁLOGO (3 tablas)
+  - categories           (12 filas)
+  - products             (32 filas)
+  - product_variants     (647 filas)
+  Relaciones: Category 1─N Product 1─N ProductVariant
+  Constraints: check de coherencia segment↔age_group, márgenes positivos,
+               style_code en mayúsculas, UNIQUE (product_id, size, color)
+
+M2 — GEOGRAFÍA (3 tablas)
+  - states                    (10 filas)
+  - locations                 (15 filas: 3 CEDIS + 12 tiendas)
+  - state_category_affinity   (120 filas)
+  Relaciones: State 1─N Location · State N─M Category (vía affinity)
+
+M3 — CLIENTES (2 tablas)
+  - customers                    (10,000 filas)
+  - customer_category_preference (24,899 filas: 2–3 por cliente)
+  Relaciones: Customer N─1 State · Customer 1─N CustomerCategoryPreference
+  Constraints: profile=NEW → total_orders=0, fechas coherentes
+
+M4 — INVENTARIO (4 tablas)
+  - inventory            (2,901 filas: 647×3 CEDIS + 80×12 tiendas)
+  - inventory_movements  (2,901 movimientos de apertura)
+  - transfers            (runtime)
+  - transfer_items       (runtime)
+  available_quantity es GENERATED (quantity - reserved_quantity)
+  Trazabilidad total: todo cambio tiene un movimiento
+
+M5 — SUPPLIERS (4 tablas)
+  - suppliers              (8 filas)
+  - supplier_products      (84 filas: 1–3 proveedores por producto)
+  - purchase_orders        (runtime)
+  - purchase_order_items   (runtime)
+  unit_cost congelado al momento de la asignación
+
+M6 — SALES + LOGISTICS (6 tablas)
+  - carriers        (5 filas)
+  - orders          (runtime)
+  - order_items     (runtime)
+  - shipments       (runtime)
+  - returns         (runtime)
+  - return_items    (runtime)
+  unit_price en order_items congelado al momento de la venta
+
+M7 — SIMULATION (3 tablas)
+  - simulation_runs       (runtime)
+  - simulation_events     (runtime)
+  - simulation_snapshots  (runtime)
+  parent_event_id self-referential para cascadas
+
+
+--------------------------------------------------------------------------------
+6. ESTADO DE LA API v1
+--------------------------------------------------------------------------------
+
+8 grupos de endpoints read-only documentados en /docs:
+
+  health       GET /health
+               GET /health/database
+
+  catalog      GET /api/v1/catalog/categories
+               GET /api/v1/catalog/categories/{id}
+               GET /api/v1/catalog/products
+               GET /api/v1/catalog/products/{id}
+               GET /api/v1/catalog/variants
+               GET /api/v1/catalog/variants/{id}
+
+  geography    GET /api/v1/geography/states
+               GET /api/v1/geography/states/{id}
+               GET /api/v1/geography/locations
+               GET /api/v1/geography/locations/{id}
+               GET /api/v1/geography/affinities
+
+  customers    GET /api/v1/customers
+               GET /api/v1/customers/{id}
+               GET /api/v1/customers/preferences/all
+
+  inventory    GET /api/v1/inventory
+               GET /api/v1/inventory/movements
+               GET /api/v1/inventory/transfers
+               GET /api/v1/inventory/transfers/{id}
+               GET /api/v1/inventory/transfer-items
+
+  suppliers    GET /api/v1/suppliers
+               GET /api/v1/suppliers/{id}
+               GET /api/v1/suppliers/products/all
+               GET /api/v1/suppliers/purchase-orders
+               GET /api/v1/suppliers/purchase-orders/{id}
+               GET /api/v1/suppliers/purchase-order-items
+
+  sales        GET /api/v1/sales/carriers
+               GET /api/v1/sales/orders
+               GET /api/v1/sales/orders/{id}
+               GET /api/v1/sales/order-items
+               GET /api/v1/sales/shipments
+               GET /api/v1/sales/returns
+               GET /api/v1/sales/returns/{id}
+               GET /api/v1/sales/return-items
+
+  simulation   GET /api/v1/simulation/runs
+               GET /api/v1/simulation/runs/{id}
+               GET /api/v1/simulation/runs/{id}/snapshots
+               GET /api/v1/simulation/events
+               GET /api/v1/simulation/snapshots
+
+
+--------------------------------------------------------------------------------
+7. SEEDS IMPLEMENTADOS
+--------------------------------------------------------------------------------
+
+Todos los seeds son IDEMPOTENTES (se pueden correr varias veces sin duplicar).
+
+Comando: python -m app.seed
+
+  1. catalog.py     → 12 categorías + 32 productos + 647 SKUs
+  2. geography.py   → 10 estados + 15 ubicaciones + 120 afinidades
+  3. customers.py   → 10,000 clientes + 24,899 preferencias
+  4. inventory.py   → 2,901 filas de inventario + 2,901 movimientos de apertura
+  5. suppliers.py   → 8 proveedores + 84 supplier_products
+  6. carriers.py    → 5 carriers
+
+
+--------------------------------------------------------------------------------
+8. DECISIONES TÉCNICAS CLAVE
+--------------------------------------------------------------------------------
+
+- UUID v4 generado en Python (no en DB) para portabilidad
+- Enums nativos de PostgreSQL
+- available_quantity GENERATED ALWAYS AS (quantity - reserved_quantity) STORED
+- Sin soft delete; se usa enum RecordStatus (ACTIVE/INACTIVE)
+- created_at + updated_at en todas las tablas
+- NUMERIC(10,2) o NUMERIC(12,2) para dinero
+- JSONB para configuraciones variables (config_snapshot, metadata_json, data)
+- include_object en alembic/env.py para no recrear enums existentes
+- Seeds idempotentes con verificación previa (select by business code)
+
+
+--------------------------------------------------------------------------------
+9. QUÉ ESTÁ TERMINADO
+--------------------------------------------------------------------------------
+
+✓ Infraestructura (Docker + PostgreSQL + FastAPI + SQLAlchemy + Alembic)
+✓ Planeación funcional completa (Bloques A–H)
+✓ Modelo de datos completo (M1–M7): 25 tablas + 33 enums
+✓ Migraciones Alembic (7 migraciones aplicadas correctamente)
+✓ API v1 read-only (8 grupos de endpoints)
+✓ Schemas Pydantic (7 archivos)
+✓ Seeds idempotentes (6 seeds con datos realistas)
+✓ Documentación OpenAPI automática (/docs)
+✓ Reproducibilidad por seed
+✓ Integridad referencial y constraints de negocio en DB
+
+
+--------------------------------------------------------------------------------
+10. QUÉ FALTA
+--------------------------------------------------------------------------------
+
+PENDIENTE — MOTOR DE SIMULACIÓN (app/simulation/, vacío)
+  - rng.py             → seed jerárquico
+  - demand.py          → fórmula maestra de demanda (8 factores)
+  - events.py          → catálogo de eventos + sistema de cascadas
+  - fulfillment.py     → generación de órdenes y shipments
+  - replenishment.py   → evaluación de reorder + POs + transferencias
+  - engine.py          → ciclo diario completo (8 fases)
+  - runner.py          → CLI para ejecutar una simulación
+
+PENDIENTE — TESTS
+  - Test de reproducibilidad (mismo seed → mismos datos)
+  - Test de integridad referencial
+  - Test de ciclo diario
+  - Test de eventos y cascadas
+
+PENDIENTE — DATA PLATFORM (segundo repositorio)
+  - Ingestion
+  - RAW layer
+  - Data Quality validation
+  - STAGING layer
+  - Transformation
+  - Analytical model (star schema)
+  - KPIs
+  - React Dashboard
+  - Airflow (V2)
+  - dbt (V3)
+  - Cloud (V4)
+
+PENDIENTE — ML / AI (fase muy posterior)
+  - Demand forecasting
+  - Stockout prediction
+  - Reorder recommendation
+
+
+--------------------------------------------------------------------------------
+11. PRINCIPIOS DEL PROYECTO
+--------------------------------------------------------------------------------
+
+1. No saltar a código sin planeación cerrada.
+2. Los datos deben ser consecuencia de operaciones, no aleatoriedad.
+3. Todo cambio de estado debe ser trazable.
+4. La reproducibilidad (seed) es obligatoria.
+5. Los datos deben ser coherentes con reglas de negocio.
+6. La simulación es un sistema con estado, no un generador de datos.
+7. El valor del proyecto está en demostrar el flujo completo:
+   OPERACIÓN → DATOS → INGESTA → TRANSFORMACIÓN → KPIs → DASHBOARD
+
+
+--------------------------------------------------------------------------------
+12. POSICIONAMIENTO PROFESIONAL
+--------------------------------------------------------------------------------
+
+Este proyecto complementa un perfil orientado a:
+
+- Backend Engineering
+- Full Stack
+- Data Engineering
+- Cloud
+- Software Engineering
+
+El valor NO está en "hice una tienda". Está en:
+
+  "Diseñé y construí un sistema operacional sintético con estado,
+   reglas de negocio, persistencia relacional, simulación de eventos
+   y generación de datos; posteriormente construí un pipeline de Data
+   Engineering para transformar esos datos en un modelo analítico y KPIs."
+
+
+--------------------------------------------------------------------------------
+13. CÓMO ARRANCAR EL PROYECTO
+--------------------------------------------------------------------------------
+
+Requisitos:
+  - Docker Desktop corriendo
+  - Python 3.13
+  - Git
+
+Comandos:
+
+  # 1. Clonar
+  git clone https://github.com/fabianmm83/retail-operations-simulator
+  cd retail-operations-simulator
+
+  # 2. Crear venv
+  python -m venv .venv
+  .venv\Scripts\activate
+
+  # 3. Instalar dependencias
+  pip install -e ".[dev]"
+
+  # 4. Levantar PostgreSQL
+  docker compose up -d
+
+  # 5. Aplicar migraciones
+  alembic upgrade head
+
+  # 6. Poblar la base de datos
+  python -m app.seed
+
+  # 7. Arrancar la API
+  uvicorn app.main:app --reload --port 8000
+
+  # 8. Abrir documentación
+  http://localhost:8000/docs
+
+
+--------------------------------------------------------------------------------
+14. VERIFICACIÓN DEL ESTADO ACTUAL
+--------------------------------------------------------------------------------
+
+Con el proyecto corriendo, se puede verificar:
+
+  # Conteos esperados
+  categories              → 12
+  products                → 32
+  product_variants        → 647
+  states                  → 10
+  locations               → 15
+  state_category_affinity → 120
+  customers               → 10,000
+  customer_category_pref  → 24,899
+  inventory               → 2,901
+  inventory_movements     → 2,901
+  suppliers               → 8
+  supplier_products       → 84
+  carriers                → 5
+  orders                  → 0 (runtime)
+  shipments               → 0 (runtime)
+  simulation_runs         → 0 (runtime)
+
+
+--------------------------------------------------------------------------------
+15. CONCLUSIÓN
+--------------------------------------------------------------------------------
+
+El proyecto tiene actualmente un MODELO DE DATOS EMPRESARIAL COMPLETO
+Y COHERENTE, con 25 tablas relacionadas, 33 enums nativos, reglas de
+negocio codificadas como constraints, migraciones versionadas, API REST
+documentada y datos realistas cargados.
+
+Es la base sólida sobre la cual se construirá el motor de simulación,
+que es donde el proyecto cobra vida como sistema operacional sintético.
+
+El siguiente bloque de trabajo es el motor (app/simulation/), que
+transformará este modelo estático en una operación viva que produce
+datos día a día, con estado, eventos, cascadas y consecuencias.
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================
